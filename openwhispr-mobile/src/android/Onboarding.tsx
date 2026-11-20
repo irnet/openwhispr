@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert, AppState, BackHandler, PermissionsAndroid, Platform } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import AuthScreen from '@/screens/AuthScreen';
+import AuthScreen from '@/screens/AuthScreen.android';
+import { handleAuthBack } from './auth/backPress';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useConfigStore } from '@/store/useConfigStore';
 import { useSuperwallGate } from '@/hooks/useSuperwallGate';
@@ -19,7 +20,7 @@ import {
 } from './onboarding/flow';
 import { HowItWorksScreen, PitchScreen, SplashScreen } from './onboarding/IntroScreens';
 import { PracticeScreen } from './onboarding/PracticeScreen';
-import { PracticeEditScreen } from './onboarding/PracticeEditScreen';
+import { PracticeMenuScreen } from './onboarding/PracticeMenuScreen';
 import { LanguagesScreen } from './onboarding/LanguagesScreen';
 import { AppsScreen } from './onboarding/AppsScreen';
 import {
@@ -29,12 +30,8 @@ import {
   OverlayScreen,
   readStatus,
 } from './onboarding/PermissionScreens';
-import {
-  ModeScreen,
-  PrivateReadyScreen,
-  PrivateSetupScreen,
-  ReadyScreen,
-} from './onboarding/EndScreens';
+import { ModeScreen, ReadyScreen } from './onboarding/EndScreens';
+import { DeviceReadyScreen, DeviceSetupScreen } from './onboarding/DeviceSetupScreens';
 import { applyCloudConfig } from './onboarding/setup';
 import { useOnboardingT } from './onboarding/strings';
 
@@ -75,6 +72,7 @@ export function Onboarding({ onFinish }: { onFinish: () => void }) {
   useEffect(() => {
     const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
       if (stepRef.current === 'splash') return false;
+      if (stepRef.current === 'signin' && handleAuthBack()) return true;
       back();
       return true;
     });
@@ -152,21 +150,23 @@ export function Onboarding({ onFinish }: { onFinish: () => void }) {
       return (
         <>
           <StatusBar style="light" />
-          <AuthScreen onClose={() => go('splash')} onGuestContinue={() => go('pitch')} />
+          <AuthScreen
+            variant="onboarding"
+            onClose={() => go('splash')}
+            onGuestContinue={() => go('pitch')}
+          />
         </>
       );
     case 'pitch':
       return <PitchScreen onBack={back} onNext={advance} />;
     case 'how':
       return <HowItWorksScreen onBack={back} onNext={advance} />;
-    case 'practiceMessage':
-      return <PracticeScreen key="message" kind="message" onBack={back} onNext={advance} />;
-    case 'practiceEmail':
-      return <PracticeScreen key="email" kind="email" onBack={back} onNext={advance} />;
-    case 'practiceList':
-      return <PracticeScreen key="list" kind="list" onBack={back} onNext={advance} />;
+    case 'practiceDictate':
+      return <PracticeScreen onBack={back} onNext={advance} />;
+    case 'practiceAssistant':
+      return <PracticeMenuScreen key="assistant" kind="assistant" onBack={back} onNext={advance} />;
     case 'practiceEdit':
-      return <PracticeEditScreen onBack={back} onNext={advance} />;
+      return <PracticeMenuScreen key="edit" kind="edit" onBack={back} onNext={advance} />;
     case 'languages':
       return <LanguagesScreen onBack={back} onNext={advance} />;
     case 'apps':
@@ -199,11 +199,11 @@ export function Onboarding({ onFinish }: { onFinish: () => void }) {
       );
     case 'privateSetup':
       return (
-        <PrivateSetupScreen onBack={back} onReady={advance} onUseCloud={() => void chooseCloud()} />
+        <DeviceSetupScreen onBack={back} onReady={advance} onUseCloud={() => void chooseCloud()} />
       );
     case 'privateReady':
-      return <PrivateReadyScreen onBack={back} onNext={advance} />;
+      return <DeviceReadyScreen onNext={advance} />;
     case 'ready':
-      return <ReadyScreen onDone={finish} />;
+      return <ReadyScreen onDone={finish} onDevice={mode === 'private'} />;
   }
 }
